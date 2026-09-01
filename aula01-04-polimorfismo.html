@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#071525">
+  <title>POO — Pilar 4: Polimorfismo</title>
+  <style>
+    :root {
+      --bg: #071525;
+      --bg-2: #0b2037;
+      --panel: rgba(10, 30, 51, .82);
+      --panel-strong: rgba(7, 23, 40, .96);
+      --line: rgba(148, 220, 255, .2);
+      --text: #f5fbff;
+      --muted: #b8cada;
+      --cyan: #37d7ff;
+      --cyan-soft: #9bedff;
+      --violet: #9b7bff;
+      --pink: #ff6fbd;
+      --amber: #ffc85a;
+      --green: #51e6a3;
+      --red: #ff7080;
+      --radius: 22px;
+      --shadow: 0 18px 55px rgba(0, 0, 0, .35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(55, 215, 255, .13), transparent 29%),
+        radial-gradient(circle at 83% 72%, rgba(155, 123, 255, .12), transparent 32%),
+        linear-gradient(135deg, var(--bg), #050d18 72%);
+      font-family: "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+    a { color: var(--cyan-soft); }
+
+    #bgCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: .55;
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: fixed;
+      inset: 0 0 auto 0;
+      height: 54px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 22px;
+      background: rgba(4, 14, 25, .78);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing: .02em;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      border-radius: 10px;
+      color: #04111d;
+      background: linear-gradient(135deg, var(--cyan), var(--violet));
+      box-shadow: 0 0 24px rgba(55, 215, 255, .28);
+    }
+
+    .brand span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .top-progress {
+      height: 5px;
+      flex: 1;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .09);
+    }
+
+    .top-progress > div {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--violet), var(--pink));
+      transition: width .35s ease;
+    }
+
+    .slide-count {
+      min-width: 58px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      background: rgba(255, 255, 255, .055);
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .icon-btn:hover, .icon-btn:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(55, 215, 255, .58);
+      background: rgba(55, 215, 255, .12);
+      outline: none;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 54px 0 65px;
+      z-index: 5;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      visibility: hidden;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden auto;
+      padding: clamp(26px, 4vw, 68px) clamp(28px, 5.2vw, 90px);
+      opacity: 0;
+      transform: translateX(3%);
+      transition: opacity .38s ease, transform .38s ease, visibility 0s linear .38s;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(55,215,255,.35) transparent;
+    }
+
+    .slide.active {
+      visibility: visible;
+      z-index: 2;
+      opacity: 1;
+      transform: translateX(0);
+      transition-delay: 0s;
+    }
+
+    .slide.leaving-left { transform: translateX(-3%); }
+    .slide > * { position: relative; z-index: 1; }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      width: min(46vw, 620px);
+      aspect-ratio: 1;
+      right: -14%;
+      top: -27%;
+      border: 1px solid rgba(55, 215, 255, .1);
+      border-radius: 50%;
+      box-shadow: 0 0 0 70px rgba(155, 123, 255, .025), 0 0 0 140px rgba(55, 215, 255, .018);
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      color: var(--cyan-soft);
+      font-size: clamp(12px, 1.15vw, 17px);
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 32px;
+      height: 3px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--cyan), var(--violet));
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 {
+      max-width: 980px;
+      margin-bottom: 18px;
+      font-size: clamp(45px, 6.2vw, 90px);
+      line-height: .98;
+      letter-spacing: -.045em;
+    }
+
+    h2 {
+      max-width: 1180px;
+      margin-bottom: clamp(18px, 2.3vw, 34px);
+      font-size: clamp(34px, 4.1vw, 62px);
+      line-height: 1.04;
+      letter-spacing: -.035em;
+    }
+
+    h3 {
+      margin-bottom: 9px;
+      font-size: clamp(20px, 1.8vw, 29px);
+      line-height: 1.13;
+    }
+
+    p, li {
+      color: var(--muted);
+      font-size: clamp(16px, 1.38vw, 22px);
+      line-height: 1.46;
+    }
+
+    .lead {
+      max-width: 940px;
+      color: #d9eaf5;
+      font-size: clamp(19px, 1.65vw, 27px);
+    }
+
+    .accent { color: var(--cyan); }
+    .violet { color: #beaaff; }
+    .pink { color: #ff9bd1; }
+    .amber { color: var(--amber); }
+    .green { color: var(--green); }
+    .red { color: var(--red); }
+    .muted { color: var(--muted); }
+    .small { font-size: clamp(12px, 1vw, 15px); }
+
+    .hero-grid,
+    .two-col,
+    .media-grid,
+    .scenario-display {
+      display: grid;
+      align-items: center;
+      gap: clamp(24px, 3.5vw, 58px);
+    }
+
+    .hero-grid { grid-template-columns: 1.05fr .95fr; }
+    .two-col { grid-template-columns: 1fr 1fr; }
+    .media-grid { grid-template-columns: .9fr 1.1fr; }
+    .scenario-display { grid-template-columns: 1fr 1fr; }
+
+    .hero-subtitle {
+      max-width: 780px;
+      margin: 0 0 26px;
+      color: #d6e9f5;
+      font-size: clamp(19px, 1.7vw, 27px);
+    }
+
+    .meta-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #d9ebf7;
+      background: rgba(255,255,255,.045);
+      font-size: clamp(12px, 1vw, 15px);
+    }
+
+    .hero-visual {
+      position: relative;
+      min-height: min(58vh, 520px);
+    }
+
+    .phone-stack {
+      position: absolute;
+      inset: 6% 6% 6% 8%;
+      display: grid;
+      place-items: center;
+    }
+
+    .phone {
+      position: absolute;
+      width: min(31vw, 320px);
+      aspect-ratio: .56;
+      padding: 14px;
+      border: 2px solid rgba(163, 231, 255, .34);
+      border-radius: 35px;
+      background: linear-gradient(145deg, rgba(22, 63, 96, .94), rgba(6, 20, 35, .96));
+      box-shadow: var(--shadow), inset 0 0 32px rgba(55, 215, 255, .05);
+      transform: rotate(-7deg);
+    }
+
+    .phone.two {
+      right: 3%;
+      top: 3%;
+      transform: rotate(9deg) scale(.78);
+      opacity: .84;
+    }
+
+    .phone-screen {
+      height: 100%;
+      overflow: hidden;
+      border: 2px solid rgba(55, 215, 255, .28);
+      border-radius: 25px;
+      background:
+        linear-gradient(rgba(55,215,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(55,215,255,.035) 1px, transparent 1px),
+        #07111d;
+      background-size: 22px 22px;
+      padding: 16px;
+    }
+
+    .post {
+      margin-bottom: 13px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 15px;
+      background: rgba(255,255,255,.055);
+      animation: postPulse 2.6s ease-in-out infinite;
+    }
+    .post:nth-child(2){animation-delay:-.8s}
+    .post:nth-child(3){animation-delay:-1.4s}
+    @keyframes postPulse { 50% { transform: translateY(-4px); border-color: rgba(55,215,255,.35); } }
+
+    .floating-symbol {
+      position: absolute;
+      color: var(--cyan-soft);
+      font-size: clamp(25px, 3vw, 48px);
+      opacity: .75;
+      filter: drop-shadow(0 0 15px rgba(55,215,255,.35));
+      animation: floaty 4.5s ease-in-out infinite;
+    }
+    .symbol-a { right: 4%; top: 4%; }
+    .symbol-b { left: 2%; bottom: 9%; animation-delay: -2.2s; color: #c7b9ff; }
+    .symbol-c { right: 8%; bottom: 4%; animation-delay: -1.1s; color: #ff9bd1; }
+    @keyframes floaty { 50% { transform: translateY(-10px) rotate(5deg); } }
+
+    .card,
+    .glass {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(18, 49, 78, .75), rgba(8, 25, 43, .8));
+      box-shadow: 0 12px 36px rgba(0, 0, 0, .18);
+      backdrop-filter: blur(12px);
+    }
+
+    .card { padding: clamp(18px, 2vw, 30px); }
+    .glass { padding: clamp(16px, 1.7vw, 25px); }
+    .card p:last-child, .glass p:last-child { margin-bottom: 0; }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(13px, 1.7vw, 24px);
+    }
+
+    .card-grid.four { grid-template-columns: repeat(4, 1fr); }
+    .card-grid.two { grid-template-columns: repeat(2, 1fr); }
+    .card-grid.three { grid-template-columns: repeat(3, 1fr); }
+
+    .icon-circle {
+      display: grid;
+      place-items: center;
+      width: clamp(46px, 4.3vw, 66px);
+      aspect-ratio: 1;
+      margin-bottom: 14px;
+      border: 1px solid rgba(55, 215, 255, .28);
+      border-radius: 18px;
+      background: rgba(55, 215, 255, .08);
+      font-size: clamp(25px, 2.3vw, 38px);
+    }
+
+    .prompt {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-top: 22px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--amber);
+      border-radius: 0 16px 16px 0;
+      color: #fff5d9;
+      background: rgba(255, 200, 90, .09);
+      font-size: clamp(16px, 1.2vw, 19px);
+      line-height: 1.4;
+    }
+
+    .prompt strong { color: var(--amber); }
+
+    .concept-tabs, .scenario-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .toggle-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .toggle-card {
+      min-height: 118px;
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      text-align: left;
+      background: rgba(255,255,255,.045);
+      cursor: pointer;
+      transition: transform .2s ease, background .2s ease, border-color .2s ease;
+    }
+
+    .toggle-card:hover, .toggle-card:focus-visible {
+      transform: translateY(-3px);
+      border-color: rgba(55,215,255,.5);
+      outline: none;
+    }
+    .toggle-card.found { border-color: rgba(81,230,163,.65); background: rgba(81,230,163,.11); }
+    .toggle-card .check { float: right; opacity: 0; color: var(--green); }
+    .toggle-card.found .check { opacity: 1; }
+    .toggle-card strong { display: block; margin-bottom: 6px; font-size: clamp(17px, 1.3vw, 21px); }
+    .toggle-card span:last-child { color: var(--muted); font-size: clamp(13px, 1vw, 16px); }
+
+    .definition {
+      max-width: 1050px;
+      margin: 0 auto 26px;
+      padding: clamp(24px, 3vw, 42px);
+      border: 1px solid rgba(55,215,255,.28);
+      border-radius: 28px;
+      color: #f4fbff;
+      background: linear-gradient(135deg, rgba(55,215,255,.105), rgba(155,123,255,.08));
+      font-size: clamp(23px, 2.5vw, 38px);
+      font-weight: 650;
+      line-height: 1.3;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .pill-btn {
+      padding: 10px 16px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.05);
+      cursor: pointer;
+      transition: .2s ease;
+    }
+
+    .pill-btn:hover, .pill-btn:focus-visible, .pill-btn.active {
+      border-color: rgba(55,215,255,.62);
+      background: rgba(55,215,255,.13);
+      outline: none;
+    }
+
+    .concept-output {
+      min-height: 96px;
+      max-width: 920px;
+      margin: 18px auto 0;
+      color: #dcedf6;
+      text-align: center;
+      font-size: clamp(17px, 1.35vw, 22px);
+    }
+
+    .media-frame {
+      position: relative;
+      min-height: 330px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(55,215,255,.08), rgba(155,123,255,.08));
+      box-shadow: var(--shadow);
+    }
+
+    .media-frame img {
+      width: 100%;
+      height: 100%;
+      min-height: 330px;
+      display: block;
+      object-fit: cover;
+    }
+
+    .media-frame.failed::after {
+      content: "Imagem indisponível — o conteúdo da aula continua normalmente.";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 30px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .media-caption {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 9px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      color: #e7f4fb;
+      background: rgba(2,11,20,.78);
+      font-size: 11px;
+      line-height: 1.25;
+      backdrop-filter: blur(8px);
+    }
+
+    .stack { display: grid; gap: 13px; }
+    .fact-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.035);
+    }
+    .fact-row b { color: var(--cyan-soft); font-size: clamp(17px,1.35vw,22px); flex: 0 0 auto; }
+    .fact-row span { color: var(--muted); font-size: clamp(14px,1.05vw,17px); }
+
+    .connection-line {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 14px;
+      align-items: center;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .connection-line.four { grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; }
+    .connection-node {
+      min-height: 210px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      text-align: center;
+      background: rgba(255,255,255,.045);
+    }
+    .connection-node .big { display: block; margin-bottom: 12px; font-size: clamp(43px,5vw,72px); }
+    .arrow { color: var(--cyan); font-size: clamp(28px,3.5vw,48px); }
+
+    .flow-card {
+      position: relative;
+      min-height: 230px;
+      padding: 20px 17px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      text-align: center;
+      background: rgba(255,255,255,.042);
+      cursor: pointer;
+      transition: .2s ease;
+    }
+
+    .flow-card:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      z-index: 3;
+      right: -21px;
+      top: 43%;
+      color: var(--cyan);
+      font-size: 27px;
+    }
+
+    .flow-card:hover, .flow-card:focus-visible, .flow-card.active {
+      transform: translateY(-4px);
+      border-color: rgba(55,215,255,.55);
+      background: rgba(55,215,255,.1);
+      outline: none;
+    }
+
+    .flow-card .flow-icon { display: block; margin: 8px 0 14px; font-size: clamp(38px,4vw,61px); }
+    .flow-card p { font-size: clamp(13px,1vw,16px); }
+    .flow-example {
+      min-height: 58px;
+      margin-top: 16px;
+      color: #eaf8ff;
+      text-align: center;
+      font-size: clamp(17px,1.35vw,21px);
+    }
+
+    .scenario-side {
+      min-height: 230px;
+      padding: 25px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(255,255,255,.04);
+    }
+    .scenario-side .big { font-size: 46px; }
+    .scenario-side ul { margin: 12px 0 0; padding-left: 21px; }
+
+    .quick-checks { display: grid; gap: 12px; }
+    .quick-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 15px 17px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: rgba(255,255,255,.038);
+    }
+    .quick-row p { margin: 0; color: #deedf6; }
+    .quick-actions { display: flex; gap: 7px; }
+    .quick-actions button {
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(255,255,255,.05);
+      cursor: pointer;
+    }
+    .quick-actions button:hover, .quick-actions button:focus-visible { border-color: var(--cyan); outline: none; }
+    .quick-result { grid-column: 1 / -1; display: none; color: var(--muted); font-size: 14px; }
+    .quick-row.answered .quick-result { display: block; }
+    .quick-row.correct { border-color: rgba(81,230,163,.5); }
+    .quick-row.wrong { border-color: rgba(255,112,128,.5); }
+
+    .drag-shell { display: grid; grid-template-columns: .78fr 1.22fr; gap: 20px; }
+    .draggables { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; align-content: start; }
+    .drag-item {
+      padding: 12px 10px;
+      border: 1px solid rgba(255,200,90,.28);
+      border-radius: 14px;
+      background: rgba(255,200,90,.07);
+      cursor: grab;
+      text-align: center;
+      user-select: none;
+    }
+    .drag-item.selected { outline: 3px solid var(--amber); outline-offset: 2px; }
+    .drag-item.placed { opacity: .25; pointer-events: none; }
+    .drop-zones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .drop-zone {
+      min-height: 158px;
+      padding: 13px;
+      border: 2px dashed rgba(55,215,255,.25);
+      border-radius: 17px;
+      background: rgba(55,215,255,.035);
+      cursor: pointer;
+      transition: .18s ease;
+    }
+    .drop-zone:hover, .drop-zone:focus-visible, .drop-zone.dragover {
+      border-color: var(--cyan);
+      background: rgba(55,215,255,.09);
+      outline: none;
+    }
+    .drop-zone b { display: block; margin-bottom: 6px; color: var(--cyan-soft); }
+    .drop-zone .placed-labels { color: var(--muted); font-size: 13px; }
+    .game-status { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; color: var(--muted); }
+
+    .timeline-shell {
+      display: grid;
+      grid-template-columns: minmax(235px, .7fr) 1.3fr;
+      gap: clamp(20px, 3vw, 45px);
+      align-items: stretch;
+    }
+
+    .timeline-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 9px;
+    }
+
+    .time-btn {
+      min-height: 66px;
+      padding: 10px 8px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      color: var(--muted);
+      background: rgba(255,255,255,.04);
+      cursor: pointer;
+      transition: .2s ease;
+    }
+
+    .time-btn strong { display: block; color: var(--text); font-size: 16px; }
+    .time-btn:hover, .time-btn:focus-visible, .time-btn.active {
+      transform: translateY(-2px);
+      border-color: rgba(255,200,90,.55);
+      color: #fff0c5;
+      background: rgba(255,200,90,.1);
+      outline: none;
+    }
+
+    .timeline-detail {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 330px;
+      overflow: hidden;
+      padding: clamp(25px, 3vw, 44px);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(22,64,96,.72), rgba(8,23,40,.9));
+      box-shadow: var(--shadow);
+    }
+
+    .timeline-year {
+      margin-bottom: 9px;
+      color: var(--amber);
+      font-size: clamp(34px, 5vw, 72px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -.04em;
+    }
+    .timeline-detail h3 { font-size: clamp(24px, 2.4vw, 37px); }
+    .timeline-detail p { max-width: 760px; }
+
+    .quiz-shell {
+      max-width: 1060px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .quiz-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 15px;
+      color: var(--muted);
+    }
+    .quiz-mini-progress { flex: 1; height: 8px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.08); }
+    .quiz-mini-progress div { height: 100%; background: linear-gradient(90deg,var(--cyan),var(--violet)); transition: width .3s; }
+    .quiz-card {
+      min-height: 465px;
+      padding: clamp(24px,3vw,43px);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(145deg, rgba(18,49,78,.86), rgba(7,22,39,.94));
+      box-shadow: var(--shadow);
+    }
+    .quiz-card h3 { margin-bottom: 24px; font-size: clamp(23px,2.45vw,37px); }
+    .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .quiz-option {
+      min-height: 67px;
+      padding: 14px 17px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      text-align: left;
+      background: rgba(255,255,255,.045);
+      cursor: pointer;
+      transition: .18s ease;
+    }
+    .quiz-option:hover, .quiz-option:focus-visible { transform: translateY(-2px); border-color: rgba(55,215,255,.55); outline: none; }
+    .quiz-option.correct { border-color: var(--green); background: rgba(81,230,163,.13); }
+    .quiz-option.wrong { border-color: var(--red); background: rgba(255,112,128,.13); }
+    .quiz-option:disabled { cursor: default; }
+    .quiz-feedback { min-height: 72px; margin-top: 17px; padding: 12px 15px; border-radius: 14px; color: var(--muted); background: rgba(0,0,0,.12); }
+    .quiz-feedback.good { color: #d8ffec; background: rgba(81,230,163,.08); }
+    .quiz-feedback.bad { color: #ffe0e4; background: rgba(255,112,128,.08); }
+    .quiz-actions { display: flex; justify-content: flex-end; margin-top: 13px; }
+    .primary-btn, .secondary-btn {
+      padding: 11px 17px;
+      border-radius: 13px;
+      cursor: pointer;
+    }
+    .primary-btn { border: 0; color: #04111d; background: linear-gradient(135deg,var(--cyan),#83ebff); font-weight: 800; }
+    .secondary-btn { border: 1px solid var(--line); background: rgba(255,255,255,.05); }
+    .primary-btn:disabled { opacity: .35; cursor: default; }
+    .result-panel { display: grid; place-items: center; min-height: 390px; text-align: center; }
+    .result-score { color: var(--cyan); font-size: clamp(62px,9vw,122px); font-weight: 900; line-height: 1; }
+    .result-panel h3 { font-size: clamp(27px,3vw,44px); }
+
+    .code-block {
+      max-width: 100%;
+      overflow-x: auto;
+      padding: clamp(16px, 2vw, 24px);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(3, 12, 22, .78);
+      box-shadow: var(--shadow);
+      font-family: "SF Mono", "Fira Code", Consolas, Menlo, monospace;
+      font-size: clamp(13px, 1.05vw, 16px);
+      line-height: 1.55;
+      color: #d7ecff;
+      white-space: pre;
+    }
+    .code-block .kw { color: #ff9bd1; }
+    .code-block .fn { color: #9bedff; }
+    .code-block .str { color: #ffc85a; }
+    .code-block .cm { color: #7c93a8; font-style: italic; }
+    .code-block .nb { color: #beaaff; }
+
+    .controls {
+      position: fixed;
+      inset: auto 0 0;
+      height: 65px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 0 22px;
+      border-top: 1px solid var(--line);
+      background: rgba(4, 14, 25, .82);
+      backdrop-filter: blur(18px);
+    }
+
+    .teacher {
+      min-width: 0;
+      color: var(--muted);
+      font-size: clamp(11px, .92vw, 14px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-group { display: flex; align-items: center; gap: 9px; }
+    .nav-btn {
+      min-width: 104px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(255,255,255,.055);
+      cursor: pointer;
+      transition: .18s ease;
+    }
+    .nav-btn.next { border: 0; color: #04111d; background: linear-gradient(135deg,var(--cyan),#92edff); font-weight: 850; }
+    .nav-btn:hover:not(:disabled), .nav-btn:focus-visible:not(:disabled) { transform: translateY(-2px); outline: none; }
+    .nav-btn:disabled { opacity: .3; cursor: default; }
+    .key-hint { color: #7892a6; font-size: 12px; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      place-items: center;
+      padding: 25px;
+      background: rgba(1,7,12,.82);
+      backdrop-filter: blur(16px);
+    }
+    .modal.open { display: grid; }
+    .modal-panel {
+      width: min(1100px, 95vw);
+      max-height: 86vh;
+      overflow: auto;
+      padding: clamp(22px,3vw,40px);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      background: var(--panel-strong);
+      box-shadow: var(--shadow);
+    }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+    .modal-head h2 { margin: 0; font-size: clamp(27px,3vw,43px); }
+    .overview-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 11px; }
+    .overview-item {
+      min-height: 92px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      text-align: left;
+      background: rgba(255,255,255,.04);
+      cursor: pointer;
+    }
+    .overview-item:hover, .overview-item:focus-visible, .overview-item.current { border-color: rgba(55,215,255,.65); background: rgba(55,215,255,.1); outline: none; }
+    .overview-item small { display: block; margin-bottom: 5px; color: var(--cyan-soft); }
+    .overview-item span { color: #dcecf5; font-size: 14px; line-height: 1.2; }
+    .sources-list { display: grid; gap: 13px; }
+    .source-item { padding: 14px 16px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.035); }
+    .source-item b { display: block; margin-bottom: 5px; }
+    .source-item p { margin: 0; font-size: 14px; }
+    .help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    kbd { display: inline-block; min-width: 32px; padding: 4px 7px; border: 1px solid rgba(255,255,255,.22); border-bottom-width: 3px; border-radius: 8px; color: #fff; background: rgba(255,255,255,.06); text-align: center; }
+
+    .toast {
+      position: fixed;
+      z-index: 120;
+      left: 50%;
+      bottom: 80px;
+      max-width: min(560px, 88vw);
+      padding: 11px 16px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(4,14,25,.94);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translate(-50%, 12px);
+      pointer-events: none;
+      transition: .25s ease;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%,0); }
+
+    @media (max-width: 980px) {
+      .slide { justify-content: flex-start; }
+      .hero-grid, .two-col, .media-grid, .timeline-shell, .drag-shell, .scenario-display { grid-template-columns: 1fr; }
+      .hero-visual { display: none; }
+      .card-grid.four { grid-template-columns: repeat(2,1fr); }
+      .card-grid.three { grid-template-columns: repeat(2,1fr); }
+      .connection-line, .connection-line.four { grid-template-columns: 1fr; }
+      .connection-line .arrow { transform: rotate(90deg); text-align: center; }
+      .overview-grid { grid-template-columns: repeat(3,1fr); }
+      .flow-card:not(:last-child)::after { display:none; }
+    }
+
+    @media (max-width: 680px) {
+      .brand span:last-child, .key-hint, .teacher { display: none; }
+      .topbar, .controls { padding-left: 12px; padding-right: 12px; }
+      .slide { padding: 23px 20px 30px; }
+      .card-grid, .card-grid.two, .card-grid.four, .card-grid.three, .toggle-cards, .quiz-options, .drop-zones, .draggables { grid-template-columns: 1fr; }
+      .timeline-buttons { grid-template-columns: repeat(2,1fr); }
+      .quick-row { grid-template-columns: 1fr; }
+      .overview-grid, .help-grid { grid-template-columns: 1fr 1fr; }
+      .nav-btn { min-width: 48px; }
+      .nav-btn .nav-text { display: none; }
+      .quiz-card { min-height: 520px; }
+    }
+
+    @media (max-height: 820px) and (min-width: 800px) {
+      h2 { margin-bottom: 12px; font-size: clamp(31px, 3.45vw, 48px); }
+      h3 { margin-bottom: 6px; }
+      p, li { line-height: 1.34; }
+      .eyebrow { margin-bottom: 7px; }
+      .slide { justify-content: flex-start; padding-top: 18px; padding-bottom: 18px; }
+      .card, .glass { padding: 14px 17px; }
+      .prompt { margin-top: 13px; padding-top: 11px; padding-bottom: 11px; }
+      .media-frame, .media-frame img { min-height: 225px !important; }
+      .fact-row { padding: 10px 13px; }
+      .timeline-detail { min-height: 265px; }
+      .flow-card { min-height: 180px; }
+      .scenario-side { min-height: 185px; padding: 18px 22px; }
+      .quiz-card { min-height: 385px; padding: 22px 28px; }
+      .quiz-card h3 { margin-bottom: 15px; }
+      .quiz-option { min-height: 56px; padding: 10px 14px; }
+      .quiz-feedback { min-height: 58px; margin-top: 10px; }
+      .code-block { font-size: 12px; padding: 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
+    }
+
+  </style>
+</head>
+<body>
+  <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">🎭</span><span>POO EM PYTHON · POLIMORFISMO</span></div>
+    <div class="top-progress" aria-label="Progresso da apresentação"><div id="progressBar"></div></div>
+    <div class="slide-count" id="slideCount" aria-live="polite">1 / 1</div>
+    <button class="icon-btn" id="overviewBtn" aria-label="Ver todos os slides" title="Visão geral">▦</button>
+    <button class="icon-btn" id="sourcesBtn" aria-label="Abrir fontes" title="Fontes e créditos">☷</button>
+    <button class="icon-btn" id="helpBtn" aria-label="Abrir ajuda" title="Ajuda">?</button>
+    <button class="icon-btn" id="fullscreenBtn" aria-label="Alternar tela cheia" title="Tela cheia">⛶</button>
+  </header>
+
+  <main id="stage">
+
+    <section class="slide active" data-title="Abertura">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">POO em Python · Pilar 4</div>
+          <h1>Polimor<span class="accent">fismo</span></h1>
+          <p class="hero-subtitle">O quarto pilar da Orientação a Objetos: objetos de tipos diferentes respondendo à mesma mensagem, cada um à sua maneira.</p>
+          <div class="meta-row">
+            <span class="meta-chip">🎭 Muitas formas</span>
+            <span class="meta-chip">🗣️ Mesma mensagem</span>
+            <span class="meta-chip">🧮 Sobrecarga</span>
+            <span class="meta-chip">🐍 Python</span>
+          </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <span class="floating-symbol symbol-a">🎭</span>
+          <span class="floating-symbol symbol-b">.area()</span>
+          <span class="floating-symbol symbol-c">poly+morpho</span>
+          <div class="phone-stack">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="post"><strong>quadrado.area()</strong><br><span class="muted">→ lado²</span></div>
+                <div class="post"><strong>circulo.area()</strong><br><span class="muted">→ π·r²</span></div>
+                <div class="post"><strong>triangulo.area()</strong><br><span class="muted">→ base·altura/2</span></div>
+              </div>
+            </div>
+            <div class="phone two">
+              <div class="phone-screen">
+                <div class="post">🗣️ Mesma mensagem</div>
+                <div class="post">🎭 Formas diferentes</div>
+                <div class="post">🧩 Um único código chamador</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Aquecimento">
+      <div class="eyebrow">Aquecimento</div>
+      <h2>"Fale!" — mas cada bicho responde à sua maneira</h2>
+      <p class="lead">Um treinador pede para os animais falarem. Cada um responde de um jeito diferente à mesma ordem. Clique nos cartões.</p>
+      <div class="toggle-cards" id="warmupCards">
+        <button class="toggle-card"><span class="check">✓</span><strong>🐶 Cachorro.falar()</strong><span>"Woof!"</span></button>
+        <button class="toggle-card"><span class="check">✓</span><strong>🦆 Pato.falar()</strong><span>"Quack!"</span></button>
+        <button class="toggle-card"><span class="check">✓</span><strong>🐱 Gato.falar()</strong><span>"Meow!"</span></button>
+        <button class="toggle-card"><span class="check">✓</span><strong>🗣️ Mesma mensagem</strong><span>falar() é chamado em todos</span></button>
+        <button class="toggle-card"><span class="check">✓</span><strong>🎭 Respostas diferentes</strong><span>cada classe implementa à sua maneira</span></button>
+        <button class="toggle-card"><span class="check">✓</span><strong>🧩 Um só laço</strong><span>o "treinador" nem precisa saber qual animal é</span></button>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Definição">
+      <div class="eyebrow">Conceito-chave</div>
+      <h2>O que é Polimorfismo?</h2>
+      <div class="definition">Do grego poly (muitas) + morpho (formas): capacidade atribuída a objetos de diferentes tipos de responderem à mesma mensagem de maneira diferente.</div>
+      <p class="lead" style="text-align:center; max-width:900px; margin:0 auto;">Métodos de mesmo nome são definidos em várias classes, podendo assumir <strong class="accent">diferentes implementações</strong> em cada uma delas.</p>
+    </section>
+
+    <section class="slide" data-title="Ilustração">
+      <div class="eyebrow">Retomando a herança</div>
+      <h2>Polígono, Quadrilátero, Hexágono, Triângulo</h2>
+      <p class="lead">Clique em cada figura para ver como o método <code>area()</code> é implementado de forma diferente em cada subclasse — mas sempre chamado da mesma maneira.</p>
+      <div class="card-grid three">
+        <button class="flow-card" data-flow="quad"><span class="flow-icon">◻️</span><h3>Quadrilátero</h3><p>area()</p></button>
+        <button class="flow-card" data-flow="hex"><span class="flow-icon">⬡</span><h3>Hexágono</h3><p>area()</p></button>
+        <button class="flow-card" data-flow="tri"><span class="flow-icon">🔺</span><h3>Triângulo</h3><p>area()</p></button>
+      </div>
+      <div class="flow-example" id="flowExample">Clique em uma figura para ver a implementação do seu area().</div>
+      <div class="prompt"><strong>Não é necessário</strong> escrever um método com nome diferente para cada figura. Cada uma "sabe" calcular sua área à sua maneira, através do mesmo nome <code>area()</code>.</div>
+    </section>
+
+    <section class="slide" data-title="Sem x com polimorfismo">
+      <div class="eyebrow">Antes e depois</div>
+      <h2>Sem polimorfismo x com polimorfismo</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3 class="red">Sem polimorfismo</h3>
+          <div class="code-block" style="font-size:12px;"><span class="kw">if</span> tipo == <span class="str">'quad'</span>:
+    total += poligono[i].areaQuad()
+<span class="kw">elif</span> tipo == <span class="str">'hex'</span>:
+    total += poligono[i].areaHex()
+<span class="kw">elif</span> tipo == <span class="str">'tri'</span>:
+    total += poligono[i].areaTri()</div>
+        </div>
+        <div class="card">
+          <h3 class="green">Com polimorfismo</h3>
+          <div class="code-block" style="font-size:13px;">total = 0
+<span class="kw">for</span> p <span class="kw">in</span> poligonos:
+    total += p.<span class="fn">area</span>()   <span class="cm"># funciona para qualquer subclasse</span></div>
+        </div>
+      </div>
+      <div class="prompt"><strong>Resultado:</strong> código mais curto, mais fácil de ler e que continua funcionando mesmo se uma nova figura (ex.: Pentágono) for criada depois.</div>
+    </section>
+
+    <section class="slide" data-title="Python na prática">
+      <div class="eyebrow">Laboratório</div>
+      <h2>Polimorfismo por herança em Python</h2>
+      <div class="code-block"><span class="kw">class</span> <span class="fn">Poligono</span>:
+    <span class="kw">def</span> <span class="fn">area</span>(self):
+        <span class="kw">raise</span> NotImplementedError
+
+<span class="kw">class</span> <span class="fn">Quadrado</span>(Poligono):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, lado):
+        self.lado = lado
+    <span class="kw">def</span> <span class="fn">area</span>(self):
+        <span class="kw">return</span> self.lado ** 2
+
+<span class="kw">class</span> <span class="fn">Circulo</span>(Poligono):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, raio):
+        self.raio = raio
+    <span class="kw">def</span> <span class="fn">area</span>(self):
+        <span class="kw">return</span> 3.14 * self.raio ** 2
+
+formas = [Quadrado(4), Circulo(3)]
+<span class="kw">for</span> f <span class="kw">in</span> formas:
+    <span class="fn">print</span>(f.area())   <span class="cm"># cada uma responde à sua maneira</span></div>
+    </section>
+
+    <section class="slide" data-title="Benefícios">
+      <div class="eyebrow">Considerações</div>
+      <h2>Benefícios do polimorfismo</h2>
+      <div class="card-grid four">
+        <div class="card"><div class="icon-circle">✂️</div><h3>Menos código</h3><p>Reduz linhas de código e ramificações condicionais.</p></div>
+        <div class="card"><div class="icon-circle">🧘</div><h3>Flexibilidade</h3><p>Novas classes podem ser incluídas sem alterar o código já existente.</p></div>
+        <div class="card"><div class="icon-circle">📖</div><h3>Legibilidade</h3><p>Convencionar o nome do método facilita a leitura do código.</p></div>
+        <div class="card"><div class="icon-circle">🧩</div><h3>Uma variável, várias formas</h3><p>Uma variável do tipo Polígono pode assumir a forma de Triângulo, Retângulo etc.</p></div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Polimorfismo paramétrico">
+      <div class="eyebrow">Outra face do polimorfismo</div>
+      <h2>Polimorfismo Paramétrico (sobrecarga)</h2>
+      <p class="lead">Vários métodos com o <strong>mesmo nome</strong>, definidos na <strong>mesma classe</strong>, que se diferenciam pelo tipo ou número de parâmetros — também chamado de <em>overloading</em>.</p>
+      <div class="code-block"><span class="kw">class</span> <span class="fn">Player</span>:
+    <span class="kw">def</span> <span class="fn">escape</span>(self):
+        ...
+    <span class="kw">def</span> <span class="fn">escape</span>(self, mapa):
+        ...
+    <span class="kw">def</span> <span class="fn">escape</span>(self, mapa, veiculo):
+        ...</div>
+      <div class="prompt"><strong>Atenção em Python:</strong> ao contrário de Java/C++, Python <em>não</em> suporta sobrecarga real — a última definição de <code>escape</code> substituiria as anteriores! Em Python, o mesmo efeito é obtido com <strong class="amber">parâmetros com valor padrão</strong> (<code>def escape(self, mapa=None, veiculo=None):</code>).</div>
+    </section>
+
+    <section class="slide" data-title="Sobrecarga x sobrescrita">
+      <div class="eyebrow">Não confunda</div>
+      <h2>Overloading x Overriding</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3 class="cyan">Sobrecarga (overloading)</h3>
+          <p>Mesmo nome, <strong>mesma classe</strong>, parâmetros diferentes. É o polimorfismo paramétrico.</p>
+        </div>
+        <div class="card">
+          <h3 class="violet">Sobrescrita (overriding)</h3>
+          <p>Mesmo nome, <strong>classes diferentes</strong> ligadas por herança, reimplementando o método herdado. É o polimorfismo "clássico".</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Jogo: sobrecarga ou sobrescrita?">
+      <div class="eyebrow">Atividade interativa</div>
+      <h2>Classifique cada situação</h2>
+      <p class="lead">Clique em uma situação e depois na categoria correta.</p>
+      <div class="drag-shell">
+        <div>
+          <div class="draggables" id="dragItems"></div>
+          <div class="game-status"><span id="gameScore">0 acertos</span><button class="secondary-btn" id="resetGame">Reiniciar</button></div>
+        </div>
+        <div class="drop-zones">
+          <div class="drop-zone" data-zone="sobrecarga"><b>🧮 Sobrecarga (overloading)</b><div class="placed-labels"></div></div>
+          <div class="drop-zone" data-zone="sobrescrita"><b>🎭 Sobrescrita (overriding)</b><div class="placed-labels"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Checagem rápida">
+      <div class="eyebrow">Checagem rápida</div>
+      <h2>Isso é polimorfismo?</h2>
+      <div class="quick-checks" id="quickChecks">
+        <div class="quick-row" data-answer="sim">
+          <p>"Circulo.area() e Quadrado.area() calculam a área de formas diferentes, mas o código chamador só usa forma.area()."</p>
+          <div class="quick-actions"><button data-choice="sim">É polimorfismo</button><button data-choice="nao">Não é</button></div>
+          <div class="quick-result">É polimorfismo: mesma mensagem, implementações diferentes por tipo de objeto.</div>
+        </div>
+        <div class="quick-row" data-answer="nao">
+          <p>"Duas classes sem nenhuma relação de herança têm métodos com nomes totalmente diferentes."</p>
+          <div class="quick-actions"><button data-choice="sim">É polimorfismo</button><button data-choice="nao">Não é</button></div>
+          <div class="quick-result">Não é: para haver polimorfismo, o nome do método (a mensagem) precisa ser o mesmo.</div>
+        </div>
+        <div class="quick-row" data-answer="sim">
+          <p>"Uma lista mistura objetos Triangulo, Retangulo e Hexagono, e um único laço chama .area() em cada um."</p>
+          <div class="quick-actions"><button data-choice="sim">É polimorfismo</button><button data-choice="nao">Não é</button></div>
+          <div class="quick-result">É polimorfismo: o mesmo código funciona para objetos de tipos diferentes.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Atividade prática">
+      <div class="eyebrow">Mão na massa</div>
+      <h2>Exercício: hierarquia Forma com polimorfismo</h2>
+      <p class="lead">Em duplas, completem o código para que <code>area()</code> funcione de forma polimórfica.</p>
+      <div class="code-block"><span class="kw">class</span> <span class="fn">Forma</span>:
+    <span class="kw">def</span> <span class="fn">area</span>(self):
+        <span class="kw">raise</span> NotImplementedError
+
+<span class="kw">class</span> <span class="fn">Triangulo</span>(Forma):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, base, altura):
+        self.base, self.altura = base, altura
+    <span class="cm"># TODO: implemente area() = base * altura / 2</span>
+
+<span class="kw">class</span> <span class="fn">Retangulo</span>(Forma):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, largura, altura):
+        self.largura, self.altura = largura, altura
+    <span class="cm"># TODO: implemente area() = largura * altura</span>
+
+<span class="cm"># TODO: crie uma lista com um Triangulo e um Retangulo</span>
+<span class="cm"># e some as áreas usando um único laço com .area()</span></div>
+    </section>
+
+    <section class="slide" data-title="Quiz">
+      <div class="eyebrow">Quiz gamificado</div>
+      <h2>Quiz final — 8 perguntas</h2>
+      <div class="quiz-shell">
+        <div class="quiz-head">
+          <span id="quizCounter">Pergunta 1 de 8</span>
+          <div class="quiz-mini-progress"><div id="quizProgress"></div></div>
+          <span id="quizScore">0 pts</span>
+        </div>
+        <div class="quiz-card" id="quizCard">
+          <h3 id="quizQuestion"></h3>
+          <div class="quiz-options" id="quizOptions"></div>
+          <div class="quiz-feedback" id="quizFeedback">Escolha uma alternativa para começar.</div>
+          <div class="quiz-actions">
+            <button class="primary-btn" id="nextQuizBtn" disabled>Próxima</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Encerramento">
+      <div class="eyebrow">Fechamento dos 4 pilares</div>
+      <h2>Polimorfismo em uma frase — e a jornada completa</h2>
+      <div class="definition">Polimorfismo é responder à mesma mensagem de formas diferentes, sem que quem envia a mensagem precise saber qual forma exata vai atender.</div>
+      <div class="connection-line four">
+        <div class="connection-node"><span class="big">🔍</span><h3>Abstração</h3><p>O que importa modelar.</p></div>
+        <div class="arrow">→</div>
+        <div class="connection-node"><span class="big">🔒</span><h3>Encapsulamento</h3><p>Como proteger por dentro.</p></div>
+        <div class="arrow">→</div>
+        <div class="connection-node"><span class="big">🌳</span><h3>Herança</h3><p>Como reaproveitar entre classes.</p></div>
+        <div class="arrow">→</div>
+        <div class="connection-node"><span class="big">🎭</span><h3>Polimorfismo</h3><p>Como responder de formas diferentes.</p></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="controls">
+    <div class="teacher">Professor Wallennon Germano · Slide HTML interativo · Pilar 4: Polimorfismo</div>
+    <div class="nav-group">
+      <button class="nav-btn" id="prevBtn">← <span class="nav-text">Anterior</span></button>
+      <button class="nav-btn next" id="nextBtn"><span class="nav-text">Próximo</span> →</button>
+    </div>
+    <div class="key-hint">Atalhos: ← → · espaço · F · O</div>
+  </footer>
+
+  <div class="modal" id="overviewModal" role="dialog" aria-modal="true" aria-labelledby="overviewTitle">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2 id="overviewTitle">Visão geral dos slides</h2>
+        <button class="icon-btn close-modal" aria-label="Fechar">×</button>
+      </div>
+      <div class="overview-grid" id="overviewGrid"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="sourcesModal" role="dialog" aria-modal="true" aria-labelledby="sourcesTitle">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2 id="sourcesTitle">Fontes e créditos</h2>
+        <button class="icon-btn close-modal" aria-label="Fechar">×</button>
+      </div>
+      <div class="sources-list">
+
+        <div class="source-item"><b>Material de referência</b><p>Slides originais "Polimorfismo" e "Polimorfismo Paramétrico" — Programação Orientada a Objetos, Prof. Alex Sandro da Cunha Rêgo, Instituto Federal da Paraíba (IFPB) — Campus João Pessoa.</p></div>
+        <div class="source-item"><b>Adaptação</b><p>Conteúdo reorganizado em slide HTML interativo, com exemplos em Python, atividades práticas e quiz adicionais.</p></div>
+        <div class="source-item"><b>Sequência da disciplina</b><p>Este material fecha os quatro pilares da POO: Abstração → Encapsulamento → Herança → Polimorfismo.</p></div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2 id="helpTitle">Ajuda e atalhos</h2>
+        <button class="icon-btn close-modal" aria-label="Fechar">×</button>
+      </div>
+      <div class="help-grid">
+        <div class="card"><h3>Navegação</h3><p><kbd>→</kbd> próximo · <kbd>←</kbd> anterior · <kbd>Espaço</kbd> avançar</p></div>
+        <div class="card"><h3>Apresentação</h3><p><kbd>F</kbd> tela cheia · <kbd>O</kbd> visão geral · <kbd>?</kbd> ajuda</p></div>
+        <div class="card"><h3>Interações</h3><p>Clique em cartões, botões e alternativas do quiz para ativar respostas.</p></div>
+        <div class="card"><h3>Dica de aula</h3><p>Use as atividades como pausas para debate rápido em duplas ou grupos.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+
+    const flowExamples = {
+      quad: 'Em um quadrilátero: area() = base × altura (ou soma de triângulos, conforme o caso).',
+      hex: 'Em um hexágono regular: area() = (3√3/2) × lado².',
+      tri: 'Em um triângulo: area() = (base × altura) / 2.'
+    };
+
+    const gameItems = [
+      {label:'def escape(self):  /  def escape(self, mapa):', zone:'sobrecarga'},
+      {label:'Cachorro.emitir_som() reimplementa Animal.emitir_som()', zone:'sobrescrita'},
+      {label:'def somar(self, a, b):  /  def somar(self, a, b, c):', zone:'sobrecarga'},
+      {label:'Quadrado.area() reimplementa Poligono.area()', zone:'sobrescrita'},
+      {label:'def desconto(self, valor):  /  def desconto(self, valor, cupom):', zone:'sobrecarga'},
+      {label:'Gerente.calcularSalario() reimplementa Funcionario.calcularSalario()', zone:'sobrescrita'}
+    ];
+
+    const quizData = [
+      {q:'O que significa a palavra "polimorfismo"?', o:['Muitos objetos', 'Muitas formas (poly + morpho)', 'Sem forma definida', 'Um único método'], a:1, exp:'Do grego: poly (muitas) + morpho (formas) — muitas formas para a mesma mensagem.'},
+      {q:'Polimorfismo permite que objetos de tipos diferentes:', o:['Nunca se comuniquem', 'Respondam à mesma mensagem de maneiras diferentes', 'Sejam sempre idênticos', 'Percam seus atributos'], a:1, exp:'Cada classe implementa o método de sua própria forma, mantendo o mesmo nome/mensagem.'},
+      {q:'Sem polimorfismo, como normalmente ficaria o código que soma áreas de várias figuras?', o:['Mais simples e menor', 'Cheio de if/elif verificando o tipo de cada figura', 'Idêntico ao código com polimorfismo', 'Impossível de escrever'], a:1, exp:'Sem polimorfismo, é comum recorrer a condicionais para tratar cada tipo separadamente.'},
+      {q:'Qual é o principal benefício do polimorfismo mostrado no exemplo dos polígonos?', o:['O código fica mais longo', 'Novas classes podem ser incluídas sem alterar o código já existente que soma as áreas', 'Deixa de ser necessário criar classes', 'Impede o uso de herança'], a:1, exp:'O código chamador (o laço que soma áreas) não muda quando uma nova figura é adicionada.'},
+      {q:'Polimorfismo paramétrico (sobrecarga) significa:', o:['Vários métodos de mesmo nome, na mesma classe, diferenciados por parâmetros', 'Vários métodos de mesmo nome em classes diferentes ligadas por herança', 'A ausência de qualquer método', 'Um método que nunca recebe parâmetros'], a:0, exp:'Sobrecarga (overloading) ocorre dentro da mesma classe, variando o número/tipo de parâmetros.'},
+      {q:'Em Python, sobrecarga de métodos (no sentido clássico de Java/C++) é:', o:['Totalmente suportada, como em Java', 'Não suportada diretamente — a última definição substitui as anteriores; usa-se parâmetros padrão', 'Obrigatória em toda classe', 'O mesmo que herança múltipla'], a:1, exp:'Python não empilha assinaturas de método; o recurso equivalente é usar valores padrão nos parâmetros.'},
+      {q:'Sobrescrita (overriding) é quando:', o:['Uma subclasse reimplementa um método herdado da superclasse', 'Dois métodos da mesma classe têm nomes diferentes', 'Um método é executado duas vezes seguidas', 'Uma variável é declarada duas vezes'], a:0, exp:'A subclasse redefine o comportamento de um método que já existia na superclasse, mantendo o mesmo nome.'},
+      {q:'Uma variável do tipo Poligono pode, graças ao polimorfismo:', o:['Assumir a forma de Triângulo, Retângulo etc., cada um com seu próprio area()', 'Ser usada apenas com objetos do tipo Poligono exato', 'Deixar de precisar de uma classe', 'Ser convertida automaticamente em texto'], a:0, exp:'Uma referência do tipo da superclasse pode apontar para qualquer objeto de suas subclasses.'}
+    ];
+
+    const slides = [...document.querySelectorAll('.slide')];
+    const progressBar = document.getElementById('progressBar');
+    const slideCount = document.getElementById('slideCount');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    let current = 0;
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function goToSlide(index) {
+      const next = Math.max(0, Math.min(index, slides.length - 1));
+      if (next === current) return;
+      slides[current].classList.toggle('leaving-left', next > current);
+      slides[current].classList.remove('active');
+      current = next;
+      slides[current].classList.add('active');
+      updateUI();
+    }
+
+    function updateUI() {
+      slideCount.textContent = `${current + 1} / ${slides.length}`;
+      progressBar.style.width = `${((current + 1) / slides.length) * 100}%`;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === slides.length - 1;
+      document.querySelectorAll('.overview-item').forEach((btn, i) => btn.classList.toggle('current', i === current));
+    }
+
+    prevBtn.addEventListener('click', () => goToSlide(current - 1));
+    nextBtn.addEventListener('click', () => goToSlide(current + 1));
+
+    document.addEventListener('keydown', (e) => {
+      if (document.querySelector('.modal.open')) {
+        if (e.key === 'Escape') closeModals();
+        return;
+      }
+      if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); goToSlide(current + 1); }
+      if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); goToSlide(current - 1); }
+      if (e.key.toLowerCase() === 'f') toggleFullscreen();
+      if (e.key.toLowerCase() === 'o') openModal('overviewModal');
+      if (e.key === '?') openModal('helpModal');
+    });
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+    document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+    function closeModals() {
+      document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+    }
+    document.getElementById('overviewBtn').addEventListener('click', () => openModal('overviewModal'));
+    document.getElementById('sourcesBtn').addEventListener('click', () => openModal('sourcesModal'));
+    document.getElementById('helpBtn').addEventListener('click', () => openModal('helpModal'));
+    document.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', closeModals));
+    document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', (e) => { if (e.target === m) closeModals(); }));
+
+    const overviewGrid = document.getElementById('overviewGrid');
+    slides.forEach((slide, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'overview-item';
+      btn.innerHTML = `<small>Slide ${i + 1}</small><span>${slide.dataset.title || 'Sem título'}</span>`;
+      btn.addEventListener('click', () => { closeModals(); goToSlide(i); });
+      overviewGrid.appendChild(btn);
+    });
+
+    // ---- Cartões de descoberta (toggle-cards) ----
+    document.querySelectorAll('.toggle-cards').forEach(container => {
+      const cards = container.querySelectorAll('.toggle-card');
+      cards.forEach(card => {
+        card.addEventListener('click', () => {
+          card.classList.toggle('found');
+          const total = cards.length;
+          const found = container.querySelectorAll('.toggle-card.found').length;
+          if (found === total) showToast('Muito bem! Você mapeou todos os itens.');
+        });
+      });
+    });
+
+    // ---- Abas de conceito (concept-tabs) ----
+    if (document.getElementById('conceptTabs') && typeof conceptData !== 'undefined') {
+      const conceptOutput = document.getElementById('conceptOutput');
+      function setConcept(key) {
+        document.querySelectorAll('#conceptTabs .pill-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.concept === key));
+        conceptOutput.textContent = conceptData[key];
+      }
+      document.querySelectorAll('#conceptTabs .pill-btn').forEach(btn => btn.addEventListener('click', () => setConcept(btn.dataset.concept)));
+      setConcept(document.querySelector('#conceptTabs .pill-btn').dataset.concept);
+    }
+
+    // ---- Cartões de fluxo (flow-cards) ----
+    if (document.querySelector('.flow-card') && typeof flowExamples !== 'undefined') {
+      document.querySelectorAll('.flow-card').forEach(card => {
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.flow-card').forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          const out = document.getElementById('flowExample');
+          if (out) out.textContent = flowExamples[card.dataset.flow];
+        });
+      });
+    }
+
+    // ---- Linha do tempo / passos (timeline) ----
+    if (document.getElementById('timelineButtons') && typeof timelineSteps !== 'undefined') {
+      const timelineButtonsEl = document.getElementById('timelineButtons');
+      function setTimeline(i) {
+        document.querySelectorAll('#timelineButtons .time-btn').forEach((b, idx) => b.classList.toggle('active', idx === i));
+        document.getElementById('timelineNumber').textContent = timelineSteps[i].n;
+        document.getElementById('timelineTitle').textContent = timelineSteps[i].t;
+        document.getElementById('timelineText').textContent = timelineSteps[i].d;
+      }
+      timelineSteps.forEach((item, i) => {
+        const b = document.createElement('button');
+        b.className = 'time-btn';
+        b.innerHTML = `<strong>${item.n}</strong>${item.t}`;
+        b.addEventListener('click', () => setTimeline(i));
+        timelineButtonsEl.appendChild(b);
+      });
+      setTimeline(0);
+    }
+
+    // ---- Jogo de classificação (arrastar/clicar) ----
+    if (document.getElementById('dragItems') && typeof gameItems !== 'undefined') {
+      const dragItemsEl = document.getElementById('dragItems');
+      let selectedItem = null;
+      let gameHits = 0;
+      function renderGame() {
+        dragItemsEl.innerHTML = '';
+        selectedItem = null;
+        gameHits = 0;
+        document.getElementById('gameScore').textContent = '0 acertos';
+        document.querySelectorAll('.placed-labels').forEach(z => z.textContent = '');
+        gameItems.forEach((item, i) => {
+          const div = document.createElement('div');
+          div.className = 'drag-item';
+          div.textContent = item.label;
+          div.dataset.index = i;
+          div.draggable = true;
+          div.addEventListener('click', () => selectDrag(div));
+          div.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', i));
+          dragItemsEl.appendChild(div);
+        });
+      }
+      function selectDrag(el) {
+        document.querySelectorAll('.drag-item').forEach(x => x.classList.remove('selected'));
+        selectedItem = Number(el.dataset.index);
+        el.classList.add('selected');
+      }
+      document.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', e => {
+          e.preventDefault();
+          zone.classList.remove('dragover');
+          placeItem(Number(e.dataTransfer.getData('text/plain')), zone);
+        });
+        zone.addEventListener('click', () => {
+          if (selectedItem !== null) placeItem(selectedItem, zone);
+        });
+      });
+      function placeItem(i, zone) {
+        const item = gameItems[i];
+        const el = document.querySelector(`.drag-item[data-index="${i}"]`);
+        if (!el || el.classList.contains('placed')) return;
+        if (item.zone === zone.dataset.zone) {
+          el.classList.add('placed');
+          zone.querySelector('.placed-labels').innerHTML += `• ${item.label}<br>`;
+          gameHits++;
+          document.getElementById('gameScore').textContent = `${gameHits} acertos`;
+          showToast('Boa! Classificação correta.');
+          if (gameHits === gameItems.length) showToast('Excelente! Você concluiu a atividade.');
+        } else {
+          showToast('Quase! Reveja o conceito e tente outra categoria.');
+        }
+        selectedItem = null;
+        document.querySelectorAll('.drag-item').forEach(x => x.classList.remove('selected'));
+      }
+      const resetBtn = document.getElementById('resetGame');
+      if (resetBtn) resetBtn.addEventListener('click', renderGame);
+      renderGame();
+    }
+
+    // ---- Checagens rápidas (quick-checks) ----
+    document.querySelectorAll('.quick-row').forEach(row => {
+      row.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          row.classList.add('answered');
+          const ok = btn.dataset.choice === row.dataset.answer;
+          row.classList.toggle('correct', ok);
+          row.classList.toggle('wrong', !ok);
+        });
+      });
+    });
+
+    // ---- Quiz final ----
+    if (document.getElementById('quizCard') && typeof quizData !== 'undefined') {
+      let quizIndex = 0, quizPoints = 0, quizLocked = false;
+      const quizCounterEl = document.getElementById('quizCounter');
+      const quizScoreEl = document.getElementById('quizScore');
+      const quizProgressEl = document.getElementById('quizProgress');
+      const quizCardEl = document.getElementById('quizCard');
+      const quizCardTemplate = quizCardEl.innerHTML;
+
+      function renderQuiz() {
+        quizLocked = false;
+        quizCardEl.innerHTML = quizCardTemplate;
+        const item = quizData[quizIndex];
+        const qQuestion = document.getElementById('quizQuestion');
+        const qOptions = document.getElementById('quizOptions');
+        const qFeedback = document.getElementById('quizFeedback');
+        const qNext = document.getElementById('nextQuizBtn');
+        quizCounterEl.textContent = `Pergunta ${quizIndex + 1} de ${quizData.length}`;
+        quizScoreEl.textContent = `${quizPoints} pts`;
+        quizProgressEl.style.width = `${(quizIndex / quizData.length) * 100}%`;
+        qQuestion.textContent = item.q;
+        qFeedback.className = 'quiz-feedback';
+        qFeedback.textContent = 'Escolha uma alternativa.';
+        qNext.disabled = true;
+        qNext.textContent = quizIndex === quizData.length - 1 ? 'Ver resultado' : 'Próxima';
+        item.o.forEach((opt, i) => {
+          const btn = document.createElement('button');
+          btn.className = 'quiz-option';
+          btn.textContent = opt;
+          btn.addEventListener('click', () => answerQuiz(i, btn, item, qFeedback, qNext));
+          qOptions.appendChild(btn);
+        });
+        qNext.addEventListener('click', quizNextHandler);
+      }
+      function answerQuiz(choice, btn, item, qFeedback, qNext) {
+        if (quizLocked) return;
+        quizLocked = true;
+        const buttons = [...document.querySelectorAll('#quizOptions .quiz-option')];
+        buttons.forEach(b => b.disabled = true);
+        buttons[item.a].classList.add('correct');
+        if (choice === item.a) {
+          quizPoints++;
+          qFeedback.className = 'quiz-feedback good';
+          qFeedback.textContent = `Correto! ${item.exp}`;
+        } else {
+          btn.classList.add('wrong');
+          qFeedback.className = 'quiz-feedback bad';
+          qFeedback.textContent = `Ainda não. ${item.exp}`;
+        }
+        quizScoreEl.textContent = `${quizPoints} pts`;
+        qNext.disabled = false;
+      }
+      function quizNextHandler() {
+        quizIndex++;
+        if (quizIndex < quizData.length) renderQuiz();
+        else showQuizResult();
+      }
+      function showQuizResult() {
+        quizProgressEl.style.width = '100%';
+        const total = quizData.length;
+        const ratio = quizPoints / total;
+        const msg = ratio >= 0.9 ? 'Excelente! Domínio sólido do conteúdo.' :
+                    ratio >= 0.7 ? 'Muito bom! Vale revisar alguns detalhes.' :
+                    ratio >= 0.5 ? 'Bom começo. Vamos reforçar os conceitos principais.' :
+                    'Vamos revisar juntos e tentar novamente.';
+        quizCardEl.innerHTML = `
+          <div class="result-panel">
+            <div>
+              <div class="result-score">${quizPoints}/${total}</div>
+              <h3>${msg}</h3>
+              <p>Revise os pontos que geraram mais dúvida antes de seguir em frente.</p>
+              <button class="primary-btn" id="restartQuiz">Refazer quiz</button>
+            </div>
+          </div>`;
+        document.getElementById('restartQuiz').addEventListener('click', () => {
+          quizIndex = 0; quizPoints = 0;
+          renderQuiz();
+        });
+      }
+      renderQuiz();
+    }
+
+    // ---- Fundo animado ----
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let points = [];
+    function resizeCanvas() {
+      canvas.width = innerWidth * devicePixelRatio;
+      canvas.height = innerHeight * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+      points = Array.from({length: 90}, () => ({
+        x: Math.random() * innerWidth,
+        y: Math.random() * innerHeight,
+        vx: (Math.random() - .5) * .42,
+        vy: (Math.random() - .5) * .42,
+        r: Math.random() * 2 + .7
+      }));
+    }
+    function drawBackground() {
+      ctx.clearRect(0,0,innerWidth,innerHeight);
+      ctx.fillStyle = 'rgba(55,215,255,.75)';
+      for (const p of points) {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > innerWidth) p.vx *= -1;
+        if (p.y < 0 || p.y > innerHeight) p.vy *= -1;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(55,215,255,.16)';
+      for (let i=0;i<points.length;i++) {
+        for (let j=i+1;j<points.length;j++) {
+          const dx = points[i].x-points[j].x, dy = points[i].y-points[j].y, d = Math.hypot(dx,dy);
+          if (d < 120) {
+            ctx.globalAlpha = (120-d)/120;
+            ctx.beginPath(); ctx.moveTo(points[i].x,points[i].y); ctx.lineTo(points[j].x,points[j].y); ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+      requestAnimationFrame(drawBackground);
+    }
+    addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    drawBackground();
+    updateUI();
+
+  </script>
+</body>
+</html>
